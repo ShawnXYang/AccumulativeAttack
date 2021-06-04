@@ -12,11 +12,13 @@ This project is tested under the following environment settings:
 - PyTorch: >= 1.6.0
 - Torchvision: >= 0.6.0
 
-## Running Commands
+## Running commands
 
-### Online Learning Cases
+### Burn-in phase
 
-### Federated Learning Cases
+### Accumulative poisoning attacks in online learning cases
+
+### Accumulative poisoning attacks in federated learning cases
 Below we provide running commands for accumulative phase (controlled by `--feder_lambda`, `--epoch`) + poisoned trigger (controlled by `--poisoned_trigger_step`):
 ```python
 python feder_accu_train.py \
