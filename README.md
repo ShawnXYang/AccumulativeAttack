@@ -11,3 +11,19 @@ This project is tested under the following environment settings:
 - Python: 3.6
 - PyTorch: >= 1.6.0
 - Torchvision: >= 0.6.0
+
+## Running Commands
+
+### Online Learning Cases
+
+### Federated Learning Cases
+Below we provide running commands for accumulative phase (controlled by `--feder_lambda`, `--epoch`) + poisoned trigger (controlled by `--poisoned_trigger_step`):
+```python
+python feder_accu_train.py \
+                  --batch_size 100 --epoch 1000 --test_batch_size 500 --log_name log_test_tmp.txt\
+                  --resume checkpoints_base_bn --use_bn --model_name epoch40.pth \
+                  --mode 'train' --onlinemode 'train' --feder_lambda 8e-2 --lr 1e-1 --momentum 0.9 \
+                  --poisoned_trigger_step 0.01 \
+                  --clip_gradnorm --clipvalue 10
+```
+Here we also activate the gradient norm clipping operations by the FLAGs `--clip_gradnorm` and `--clipvalue`.
