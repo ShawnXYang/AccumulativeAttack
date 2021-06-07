@@ -1,6 +1,6 @@
 # Accumulative Poisoning Attacks on Real-time data
 
-The code for the paper 'Accumulative Poisoning Attacks on Real-time data' submitted to NeurIPS 2021, paper ID is 4176.
+The code for the paper 'Accumulative Poisoning Attacks on Real-time data' submitted to NeurIPS 2021
 
 ## Environment settings and libraries we used in our experiments
 

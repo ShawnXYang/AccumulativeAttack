@@ -14,7 +14,6 @@ from sklearn.metrics import roc_auc_score, f1_score, roc_curve
 from utils.misc import *
 from utils.test_helpers import test
 from utils.train_helpers import *
-from utils.rotation import rotate_batch
 from utils.model import resnet18
 
 device = 'cuda'

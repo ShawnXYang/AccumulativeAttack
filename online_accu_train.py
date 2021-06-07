@@ -7,25 +7,12 @@ import random
 
 from utils.misc import *
 from utils.adapt_helpers import *
-from utils.rotation import rotate_batch
 from utils.model import resnet18
-from utils.train_helpers import normalize, te_transforms
+from utils.train_helpers import te_transforms
 from utils.test_helpers import test
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-import matplotlib.pyplot as plt
-cifar10_mean = (0.4914, 0.4822, 0.4465) # equals np.mean(train_set.train_data, axis=(0,1,2))/255
-cifar10_std = (0.2023, 0.1994, 0.2010) # equals np.std(train_set.train_data, axis=(0,1,2))/255
-
-mu = torch.tensor(cifar10_mean).view(3,1,1).cuda()
-std = torch.tensor(cifar10_std).view(3,1,1).cuda()
-
-def imshow(img):
-    img = img / 2 + 0.5     # unnormalize
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -51,6 +38,7 @@ parser.add_argument('--online', action='store_true')
 parser.add_argument('--epsilon', default=0.2, type=float)
 parser.add_argument('--dset_size', default=0, type=int)
 parser.add_argument('--seed', default=20, type=int)
+parser.add_argument('--shuffle', action='store_true')
 ########################################################################
 parser.add_argument('--use_bn', default=False, action='store_true', help='use_bn')
 parser.add_argument('--only_second', default=False, action='store_true', help='use_second')
@@ -59,7 +47,7 @@ parser.add_argument('--only_reg', default=False, action='store_true', help='use_
 parser.add_argument('--use_initlr', default=False, action='store_true', help='')
 parser.add_argument('--resume', default='checkpoints_base2')
 parser.add_argument('--model_name', default='epoch40.pth')
-parser.add_argument('--mode', default='train', type=str)
+parser.add_argument('--mode', default='eval', type=str)
 parser.add_argument('--onlinemode', default='train', type=str)
 parser.add_argument('--distance', default='linf', type=str)
 parser.add_argument('--outf', default='.')
@@ -108,7 +96,7 @@ optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weig
 if args.restore_optimizer:
     print('restore optimizer success')
     optimizer.load_state_dict(ckpt['optimizer'])
-trset, trloader = prepare_train_data(args, shuffle=True)
+trset, trloader = prepare_train_data(args, shuffle=args.shuffle)
 teset, teloader = prepare_test_data(args, shuffle=True)
 
 def craft_rand(net, X, data_val, label, label_val, epsilon=args.epsilon, num_steps=args.num_steps):
@@ -220,7 +208,6 @@ def craft_accu(net, data_tri, data_train, data_val, label_tri, label_train, labe
                 else:
                     raise IOError
             
-            #
             total_grad_adv = 0
             for grad_train_adv in grad_params_train_adv:
                 total_grad_adv += grad_train_adv.norm()
@@ -305,7 +292,6 @@ def main_accu():
             data_tri_adv = craft_tri(net, data_tri, data_val, y_tri, y_val)
             data_tri_adv = data_tri_adv.detach()
             if args.poison_scale < 1:
-                # normal_indices = torch.randperm(len(data_tri))[int(args.poison_scale * len(data_tri)):]
                 data_tri_adv[normal_indices] = data_tri[normal_indices]
             data_tri = data_tri_adv.clone()
             

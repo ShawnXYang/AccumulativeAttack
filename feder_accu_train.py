@@ -7,14 +7,11 @@ import random
 
 from utils.misc import *
 from utils.adapt_helpers import *
-from utils.rotation import rotate_batch
 from utils.model import resnet18
-from utils.train_helpers import normalize, te_transforms
+from utils.train_helpers import te_transforms
 from utils.test_helpers import test
 from torch.autograd import Variable
 import torch.nn.functional as F
-
-import matplotlib.pyplot as plt
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -80,7 +77,6 @@ sys.stdout = Logger(os.path.join(args.resume, args.log_name), mode='a')
 print(args)
 def gn_helper(planes):
     return nn.GroupNorm(args.group_norm, planes)
-# norm_layer = gn_helper
 norm_layer = None if args.use_bn else gn_helper
 
 net = resnet18(num_classes = 10, norm_layer=norm_layer).to(device)
@@ -136,22 +132,14 @@ def craft_federated_NEW(net, data_tri, data_train, data_val, label_tri, label_tr
     else:
         raise IOError
     bs = len(data_train)
-    # train
-    # for iteration in range(args.accu_iter):
 
     optimizer.zero_grad()
 
-    # net.eval()
     loss_tri = F.cross_entropy(net(data_tri), label_tri)
     grad_params_tri = torch.autograd.grad(loss_tri, net.parameters(), create_graph=True, retain_graph=True)
-    # # grad_params_tri = torch.autograd.grad(loss_tri, [para for name, para in net.named_parameters() if 'bn' not in name], create_graph=True)
-
+    
     loss_val = F.cross_entropy(net(data_val), label_val)
     grad_params_val = torch.autograd.grad(loss_val, net.parameters(), create_graph=True, retain_graph=True)
-    # # grad_params_val = torch.autograd.grad(loss_val, [para for name, para in net.named_parameters() if 'bn' not in name], retain_graph=True)
-    
-    # net.train()
-    # loss = F.cross_entropy(net(data_train), label_train)
     
     grad_tri_all, grad_val_all = torch.tensor([]).cuda(), torch.tensor([]).cuda()
     for grad_tri, grad_val in zip(grad_params_tri, grad_params_val):
@@ -160,14 +148,11 @@ def craft_federated_NEW(net, data_tri, data_train, data_val, label_tri, label_tr
 
     norm_tri = torch.norm(grad_tri_all, p=2, dim=0).detach()
     norm_val = torch.norm(grad_val_all, p=2, dim=0).detach()
-    # print('tri', norm_tri.item())
-    # print('val', norm_val.item())
-
+    
     grad_tri_all = F.normalize(grad_tri_all, p=2, dim=0)
     grad_val_all = F.normalize(grad_val_all, p=2, dim=0)
     loss = torch.sum(grad_tri_all * grad_val_all, dim=0)
     
-    #print(loss.item())
 
     loss = args.feder_lambda * loss
     loss.backward()
@@ -177,7 +162,6 @@ def craft_federated_NEW(net, data_tri, data_train, data_val, label_tri, label_tr
         print(total_norm)
 
     optimizer.step()
-    #print(loss / args.feder_lambda)
 
 def craft_federated_PoisonTri_NEW(net, poisoned_trigger, data_tri, label_tri, data_val, label_val, optimizer):
     if args.mode == 'train':
@@ -206,8 +190,6 @@ def craft_federated_PoisonTri_NEW(net, poisoned_trigger, data_tri, label_tri, da
     grad_tri_all = F.normalize(grad_tri_all, p=2, dim=0)
     grad_val_all = F.normalize(grad_val_all, p=2, dim=0)
     loss = torch.sum(grad_tri_all * grad_val_all, dim=0)
-    
-    #print(loss.item())
 
     loss = args.feder_lambda * loss
     loss.backward()
@@ -280,7 +262,6 @@ def main_federated():
     all_error.append(1-err_cls)
     print('loss on val before tri: ', F.cross_entropy(net(data_val), y_val).detach().item())
     adapt_tensor(net, data_tri, y_tri, optimizer, criterion, 1, args.batch_size, args.onlinemode, args)
-    # adapt_tensor(net, data_val, y_val, optimizer, criterion, 1, args.batch_size, args.onlinemode)
     
     err_cls, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
     print("Test error after tri: %.4f" % (err_cls))
@@ -299,11 +280,6 @@ def main_direct():
     craft_direct_NEW(net, data_tri, data_val, y_tri, y_val, optimizer)
     err_cls, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
     print("Test error after poisoned tri: %.4f" % (err_cls))
-    # for param_group in optimizer.param_groups:
-    #     param_group['lr'] = 0.1
-    # adapt_tensor(net, data_tri, y_tri, optimizer, criterion, 1, args.batch_size, args.onlinemode)
-    # err_cls, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
-    # print("Test error after tri: %.3f" % (err_cls))
 
 def main_federated_PoisonTri():
     dt_val = teloader.__iter__().__next__()
