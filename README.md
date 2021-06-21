@@ -15,7 +15,10 @@ This project is tested under the following environment settings:
 ## Running commands
 
 ### Burn-in phase
-
+Below we provide running commands for burn-in phase
+```python
+python train_cifar.py
+```
 ### Accumulative poisoning attacks in online learning cases
 Below we provide running commands for accumulative phase + poisoned trigger(controlled by `--use_advtrigger`) + online poisoned trigger (controlled by `--use_online_advtrigger`):
 ```python

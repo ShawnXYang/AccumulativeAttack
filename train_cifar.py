@@ -19,7 +19,7 @@ parser.add_argument('--batch_size', default=256, type=int)
 parser.add_argument('--test_batch_size', default=256, type=int)
 parser.add_argument('--workers', default=8, type=int)
 ########################################################################
-parser.add_argument('--epochs', default=41, type=int)
+parser.add_argument('--epochs', default=40, type=int)
 parser.add_argument('--start_epoch', default=1, type=int)
 parser.add_argument('--save_freq', default=10, type=int)
 parser.add_argument('--lr', default=0.1, type=float)
