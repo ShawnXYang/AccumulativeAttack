@@ -54,7 +54,6 @@ parser.add_argument('--outf', default='.')
 parser.add_argument('--epochs', default=1, type=int)
 parser.add_argument('--gamma', default=1., type=float)
 parser.add_argument('--beta', default=1., type=float)
-parser.add_argument('--logdir', default='', type=str)
 parser.add_argument('--momentum', default=0, type=float)
 parser.add_argument('--weight_decay', default=0, type=float)
 parser.add_argument('--poison_scale', default=1., type=float)
@@ -64,6 +63,8 @@ parser.add_argument('--use_online_advtrigger', default=False, action='store_true
 parser.add_argument('--num-steps', default=2, type=int, help='perturb number of steps')
 parser.add_argument('--threshold', default=0.18, type=float)
 parser.add_argument('--restore_optimizer', default=False, action='store_true')
+parser.add_argument('--clip_gradnorm', default=False, action='store_true')
+parser.add_argument('--clipvalue', default=1, type=float)
 
 args = parser.parse_args()
 my_makedir(args.outf)
@@ -71,7 +72,7 @@ import torch.backends.cudnn as cudnn
 cudnn.benchmark = False
 setup_seed(args.seed)
 
-sys.stdout = Logger(os.path.join(args.resume, args.logdir, args.log_name), mode='a')
+sys.stdout = Logger(os.path.join(args.resume, args.log_name), mode='a')
 print(args)
 
 round_err = 1e3 # round error where the sign() function should return 0
@@ -208,19 +209,6 @@ def craft_accu(net, data_tri, data_train, data_val, label_tri, label_train, labe
                 else:
                     raise IOError
             
-            total_grad_adv = 0
-            for grad_train_adv in grad_params_train_adv:
-                total_grad_adv += grad_train_adv.norm()
-            
-            if idx == 0 or idx == (num_steps-1):
-                print(grads_train.item(), grads.item(), total_grad_adv.item(), len(grad_params_train_adv))
-                total_tri, total_val, total_adv = 0, 0, 0
-                for grad_tri, grad_val, grad_train_adv in zip(grad_params_tri, grad_params_val, grad_params_train_adv):
-                    total_tri += grad_tri.norm().detach()
-                    total_val += grad_val.norm().detach()
-                    total_adv += grad_train_adv.norm().detach()
-                print('norm values\t tri:{:.4f}, val:{:.4f}, adv:{:.4f}'.format(total_tri.mean().item(), total_val.mean().item(), total_adv.mean().item()))
-            
             X_grad = torch.autograd.grad(grads_train, X_pgd)
         
         if args.distance == 'linf':
@@ -240,7 +228,7 @@ def main_base():
     for idx in range(args.epochs):
         dt_tri = trloader.__iter__().__next__()
         data_tri, y_tri = dt_tri[0].to(device), dt_tri[1].to(device)
-        adapt_tensor(net, data_tri, y_tri, optimizer, criterion, args.niter, args.batch_size)
+        adapt_tensor(net, data_tri, y_tri, optimizer, criterion, args.niter, args.batch_size, args)
         err_cls, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
         print("Test error: %.4f" % (err_cls))
 
@@ -257,7 +245,7 @@ def main_tri():
 
     
     data_tri_adv = craft_tri(net, data_tri, data_val, y_tri, y_val)
-    adapt_tensor(net, data_tri_adv.detach(), y_tri, optimizer, criterion, 1, args.batch_size, args.onlinemode)
+    adapt_tensor(net, data_tri_adv.detach(), y_tri, optimizer, criterion, 1, args.batch_size, args.onlinemode, args)
     err_cls, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
     print("Test error after tri: %.4f" % (err_cls))
 
@@ -283,7 +271,7 @@ def main_accu():
         data_train_adv = data_train_adv.detach()
         if args.poison_scale < 1:
             data_train_adv[normal_indices] = data_train[normal_indices]
-        adapt_tensor(net, data_train_adv, y_train, optimizer, criterion, 1, args.batch_size, args.onlinemode)
+        adapt_tensor(net, data_train_adv, y_train, optimizer, criterion, 1, args.batch_size, args.onlinemode, args)
         err_cls, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
         print("Epoch:%d Test error: %.4f" % (idx, err_cls))
         if err_cls > args.threshold:   break
@@ -297,7 +285,7 @@ def main_accu():
             
     err_cls_before, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
     print("Test error before tri: %.4f" % (err_cls_before))
-    adapt_tensor(net, data_tri, y_tri, optimizer, criterion, args.niter, args.batch_size, args.onlinemode)
+    adapt_tensor(net, data_tri, y_tri, optimizer, criterion, args.niter, args.batch_size, args.onlinemode, args)
     err_cls_after, correct_per_cls, total_per_cls = test(teloader, net, verbose=True, print_freq=0)
     print("Test error after tri: %.4f" % (err_cls_after))
     print("Error Delta: {:.4f}".format(err_cls_after - err_cls_before))

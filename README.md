@@ -23,7 +23,7 @@ python online_accu_train.py \
                   --batch_size 100 --epoch 100 --test_batch_size 500 --log_name log_test_online.txt\
                   --resume checkpoints_base_bn --use_bn --model_name epoch40.pth \
                   --mode 'eval' --onlinemode 'train' --lr 1e-1 --momentum 0.9 \
-                  --beta 1. --logdir log_online --threshold 0.18 --use_advtrigger
+                  --beta 1. --only_reg --threshold 0.18 --use_advtrigger
 ```
 ### Accumulative poisoning attacks in federated learning cases
 Below we provide running commands for accumulative phase (controlled by `--feder_lambda`, `--epoch`) + poisoned trigger (controlled by `--poisoned_trigger_step`):
